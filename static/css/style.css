@@ -1,0 +1,110 @@
+/* Основные стили для приложения */
+
+body {
+    font-family: 'Roboto', Arial, sans-serif;
+    background-color: #f8f9fa;
+}
+
+/* Стили для панели навигации */
+.navbar-brand {
+    font-weight: 700;
+    font-size: 1.5rem;
+}
+
+/* Стили для боковой панели */
+.sidebar {
+    min-height: calc(100vh - 56px);
+    background-color: #343a40;
+    color: white;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar a {
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: none;
+    padding: 12px 15px;
+    display: block;
+    transition: all 0.3s;
+    border-left: 3px solid transparent;
+}
+
+.sidebar a:hover {
+    color: white;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-left: 3px solid #007bff;
+}
+
+.sidebar a.active {
+    background-color: #007bff;
+    color: white;
+    border-left: 3px solid white;
+}
+
+/* Стили для карточек */
+.card {
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.card-header {
+    font-weight: bold;
+}
+
+/* Стили для таблиц */
+.table th {
+    font-weight: 600;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.05);
+}
+
+/* Стили для кнопок */
+.btn {
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+.btn-primary:hover {
+    background-color: #0069d9;
+    border-color: #0062cc;
+}
+
+/* Стили для форм */
+.form-control:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Стили для уведомлений */
+.alert {
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+/* Стили для бейджей */
+.badge {
+    font-weight: 500;
+    padding: 5px 8px;
+}
+
+/* Адаптивные стили */
+@media (max-width: 768px) {
+    .sidebar {
+        min-height: auto;
+    }
+    
+    .content {
+        margin-top: 20px;
+    }
+} 

@@ -1,0 +1,162 @@
+{% extends 'base.html' %}
+
+{% block title %}Создание заказа | Система управления кафе{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Создание нового заказа</h1>
+        <a href="{{ url_for('waiter_orders') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-2"></i> Назад к списку
+        </a>
+    </div>
+    
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle me-2"></i> Смена от {{ active_shift.shift_date.strftime('%d.%m.%Y') }} ({{ active_shift.start_time }} - {{ active_shift.end_time }})
+    </div>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card shadow mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Меню</h5>
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('add_order') }}" method="post" id="orderForm">
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="table_number" class="form-label">Номер столика</label>
+                                    <input type="number" class="form-control" id="table_number" name="table_number" min="1" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="customers_count" class="form-label">Количество гостей</label>
+                                    <input type="number" class="form-control" id="customers_count" name="customers_count" min="1" value="1" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <h5 class="mb-3">Выберите позиции меню:</h5>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Название</th>
+                                        <th>Категория</th>
+                                        <th>Цена</th>
+                                        <th>Доступно</th>
+                                        <th>Количество</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in menu_items %}
+                                    {% set available = get_available_portions(item.id) %}
+                                    <tr>
+                                        <td>{{ item.name }}</td>
+                                        <td>{{ item.category }}</td>
+                                        <td>{{ item.price }} ₽</td>
+                                        <td>
+                                            {% if available == 'inf' %}
+                                                <span class="badge bg-secondary">Не ограничено</span>
+                                            {% elif available == 0 %}
+                                                <span class="badge bg-danger">Нет в наличии</span>
+                                            {% else %}
+                                                <span class="badge bg-success">{{ available }} порций</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="input-group" style="width: 120px;">
+                                                <input type="hidden" name="menu_item_id" value="{{ item.id }}">
+                                                <input type="number" name="quantity" class="form-control" min="0" max="{{ available if available != 'inf' else 999 }}" value="0" {{ 'disabled' if available == 0 else '' }}>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary">Создать заказ</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card shadow">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">Предварительный просмотр заказа</h5>
+                </div>
+                <div class="card-body">
+                    <div id="orderPreview">
+                        <p class="text-muted text-center">Выберите позиции меню для предварительного просмотра</p>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <h5>Итого:</h5>
+                        <h5 id="totalPrice">0 ₽</h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Получаем все поля количества
+    const quantityInputs = document.querySelectorAll('input[name="quantity"]');
+    
+    // Обновляем предварительный просмотр при изменении количества
+    quantityInputs.forEach(input => {
+        input.addEventListener('change', updateOrderPreview);
+    });
+    
+    // Функция обновления предварительного просмотра
+    function updateOrderPreview() {
+        const orderPreview = document.getElementById('orderPreview');
+        const totalPriceElement = document.getElementById('totalPrice');
+        
+        let orderItems = [];
+        let totalPrice = 0;
+        
+        // Проходим по всем позициям меню
+        quantityInputs.forEach(input => {
+            const quantity = parseInt(input.value);
+            if (quantity > 0) {
+                const row = input.closest('tr');
+                const name = row.cells[0].textContent;
+                const price = parseFloat(row.cells[2].textContent);
+                const itemTotal = price * quantity;
+                
+                orderItems.push(`
+                    <div class="d-flex justify-content-between mb-2">
+                        <div>${name} x ${quantity}</div>
+                        <div>${itemTotal} ₽</div>
+                    </div>
+                `);
+                
+                totalPrice += itemTotal;
+            }
+        });
+        
+        // Обновляем предварительный просмотр
+        if (orderItems.length > 0) {
+            orderPreview.innerHTML = orderItems.join('');
+        } else {
+            orderPreview.innerHTML = '<p class="text-muted text-center">Выберите позиции меню для предварительного просмотра</p>';
+        }
+        
+        // Обновляем общую сумму
+        totalPriceElement.textContent = `${totalPrice} ₽`;
+    }
+});
+</script>
+{% endblock %} 

@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block title %}Вход в систему | Система управления кафе{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Вход в систему</h4>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('login') }}" class="login-form">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Имя пользователя</label>
+                        <input type="text" class="form-control" id="username" name="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Пароль</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Войти</button>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer text-muted">
+                <div class="text-center">
+                    <p class="mb-0">Для входа в систему используйте:</p>
+                    <p class="mb-0"><strong>Администратор:</strong> admin / admin</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

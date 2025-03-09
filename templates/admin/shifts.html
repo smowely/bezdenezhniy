@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+
+{% block title %}Управление сменами | Система управления кафе{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Управление сменами</h1>
+        <a href="{{ url_for('add_shift') }}" class="btn btn-primary">
+            <i class="fas fa-calendar-plus me-2"></i> Создать смену
+        </a>
+    </div>
+    
+    <div class="card shadow">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>ID</th>
+                            <th>Дата</th>
+                            <th>Время начала</th>
+                            <th>Время окончания</th>
+                            <th>Сотрудники</th>
+                            <th>Статус</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for shift in shifts %}
+                        <tr>
+                            <td>{{ shift.id }}</td>
+                            <td>{{ shift.shift_date.strftime('%d.%m.%Y') }}</td>
+                            <td>{{ shift.start_time }}</td>
+                            <td>{{ shift.end_time }}</td>
+                            <td>
+                                {% if shift.employees %}
+                                    {% set employee_ids = shift.employees.split(',') %}
+                                    {% for employee_id in employee_ids %}
+                                        {% set employee = get_employee(employee_id) %}
+                                        {% if employee %}
+                                            <span class="badge bg-info text-dark">{{ employee.name }}</span>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    <span class="text-muted">Нет сотрудников</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if shift.status == 'запланирована' %}
+                                <span class="badge bg-warning text-dark">{{ shift.status }}</span>
+                                {% elif shift.status == 'активна' %}
+                                <span class="badge bg-success">{{ shift.status }}</span>
+                                {% elif shift.status == 'завершена' %}
+                                <span class="badge bg-secondary">{{ shift.status }}</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ shift.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <form action="{{ url_for('update_shift_status', id=shift.id) }}" method="post" class="d-flex">
+                                    <select name="status" class="form-select form-select-sm me-2" style="width: auto;">
+                                        <option value="запланирована" {% if shift.status == 'запланирована' %}selected{% endif %}>Запланирована</option>
+                                        <option value="активна" {% if shift.status == 'активна' %}selected{% endif %}>Активна</option>
+                                        <option value="завершена" {% if shift.status == 'завершена' %}selected{% endif %}>Завершена</option>
+                                    </select>
+                                    <button type="submit" class="btn btn-sm btn-primary">Сохранить</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center">Нет данных о сменах</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

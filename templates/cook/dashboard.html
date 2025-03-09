@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block title %}Панель повара | Система управления кафе{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mb-4">Панель повара</h1>
+    
+    {% if not user_in_active_shift %}
+    <div class="alert alert-warning">
+        <i class="fas fa-exclamation-triangle me-2"></i> Вы не назначены на активную смену. Обратитесь к администратору.
+    </div>
+    {% else %}
+    <div class="alert alert-success">
+        <i class="fas fa-check-circle me-2"></i> Вы работаете в смене от {{ active_shift.shift_date.strftime('%d.%m.%Y') }} ({{ active_shift.start_time }} - {{ active_shift.end_time }})
+    </div>
+    
+    <div class="row">
+        <div class="col-md-12 mb-4">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="card-title">Активные заказы</h5>
+                            <h2 class="display-4">{{ orders|length }}</h2>
+                            <p class="card-text">Заказов в обработке</p>
+                        </div>
+                        <i class="fas fa-utensils fa-3x"></i>
+                    </div>
+                </div>
+                <div class="card-footer d-flex align-items-center justify-content-between">
+                    <a href="{{ url_for('cook_orders') }}" class="text-white">Просмотреть все заказы</a>
+                    <i class="fas fa-angle-right"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card shadow">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Заказы в обработке</h5>
+                    <span class="badge bg-primary">{{ orders|length }}</span>
+                </div>
+                <div class="card-body">
+                    {% if orders %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Время</th>
+                                    <th>Столик</th>
+                                    <th>Официант</th>
+                                    <th>Позиции</th>
+                                    <th>Статус</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in orders %}
+                                <tr>
+                                    <td>{{ order.id }}</td>
+                                    <td>{{ order.order_date.strftime('%H:%M') }}</td>
+                                    <td>{{ order.table_number }}</td>
+                                    <td>
+                                        {% if order.waiter %}
+                                        {{ order.waiter.username }}
+                                        {% else %}
+                                        <span class="text-muted">Не указан</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ order.items }}</td>
+                                    <td>
+                                        {% if order.status == 'принят' %}
+                                        <span class="badge bg-primary">{{ order.status }}</span>
+                                        {% elif order.status == 'готовится' %}
+                                        <span class="badge bg-warning text-dark">{{ order.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if order.status == 'принят' %}
+                                        <a href="{{ url_for('cook_update_order_status', id=order.id, status='готовится') }}" class="btn btn-sm btn-warning">
+                                            <i class="fas fa-fire"></i> Начать готовить
+                                        </a>
+                                        {% elif order.status == 'готовится' %}
+                                        <a href="{{ url_for('cook_update_order_status', id=order.id, status='готов') }}" class="btn btn-sm btn-success">
+                                            <i class="fas fa-check"></i> Готово
+                                        </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-check-circle text-success fa-4x mb-3"></i>
+                        <h4>Нет активных заказов</h4>
+                        <p class="text-muted">В данный момент нет заказов, требующих обработки</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %} 

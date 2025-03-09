@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+
+{% block title %}Добавление пользователя | Система управления кафе{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Добавление нового пользователя</h1>
+        <a href="{{ url_for('admin_users') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-2"></i> Назад к списку
+        </a>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-body">
+                    <form method="post" action="{{ url_for('add_user') }}">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Имя пользователя <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="username" name="username" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Пароль <span class="text-danger">*</span></label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="role" class="form-label">Роль <span class="text-danger">*</span></label>
+                            <select class="form-select" id="role" name="role" required>
+                                <option value="" selected disabled>Выберите роль</option>
+                                <option value="admin">Администратор</option>
+                                <option value="waiter">Официант</option>
+                                <option value="cook">Повар</option>
+                            </select>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <button type="reset" class="btn btn-light me-md-2">Очистить</button>
+                            <button type="submit" class="btn btn-primary">Добавить пользователя</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card shadow">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Информация</h5>
+                </div>
+                <div class="card-body">
+                    <p>Заполните форму для добавления нового пользователя в систему.</p>
+                    <p>Поля, отмеченные <span class="text-danger">*</span>, обязательны для заполнения.</p>
+                    <p>После добавления пользователя, вы можете связать его с сотрудником в разделе "Сотрудники".</p>
+                    <p><strong>Роли пользователей:</strong></p>
+                    <ul>
+                        <li><strong>Администратор</strong> - полный доступ к системе</li>
+                        <li><strong>Официант</strong> - создание и управление заказами</li>
+                        <li><strong>Повар</strong> - просмотр и обработка заказов</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+
+{% block title %}Добавление сотрудника | Система управления кафе{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Добавление нового сотрудника</h1>
+        <a href="{{ url_for('admin_employees') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-2"></i> Назад к списку
+        </a>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-body">
+                    <form method="post" action="{{ url_for('add_employee') }}">
+                        <div class="mb-3">
+                            <label for="name" class="form-label">ФИО сотрудника <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="name" name="name" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="position" class="form-label">Должность <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="position" name="position" required>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="phone" class="form-label">Телефон</label>
+                                <input type="tel" class="form-control" id="phone" name="phone">
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="email" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="email" name="email">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="hire_date" class="form-label">Дата найма</label>
+                            <input type="date" class="form-control" id="hire_date" name="hire_date" value="{{ now().strftime('%Y-%m-%d') }}">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="user_id" class="form-label">Связать с пользователем</label>
+                            <select class="form-select" id="user_id" name="user_id">
+                                <option value="">Не связывать с пользователем</option>
+                                {% for user in available_users %}
+                                <option value="{{ user.id }}">
+                                    {{ user.username }} 
+                                    {% if user.role == 'admin' %}(Администратор)
+                                    {% elif user.role == 'waiter' %}(Официант)
+                                    {% elif user.role == 'cook' %}(Повар)
+                                    {% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <button type="reset" class="btn btn-light me-md-2">Очистить</button>
+                            <button type="submit" class="btn btn-primary">Добавить сотрудника</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card shadow">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Информация</h5>
+                </div>
+                <div class="card-body">
+                    <p>Заполните форму для добавления нового сотрудника в систему.</p>
+                    <p>Поля, отмеченные <span class="text-danger">*</span>, обязательны для заполнения.</p>
+                    <p>После добавления сотрудника, вы сможете назначать его на смены.</p>
+                    <p>Если вы хотите, чтобы сотрудник имел доступ к системе, свяжите его с пользователем.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Функция для получения текущей даты
+    function now() {
+        return new Date();
+    }
+</script>
+{% endblock %} 

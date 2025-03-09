@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block title %}Добавление продукта | Система управления кафе{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Добавление нового продукта</h1>
+        <a href="{{ url_for('admin_products') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-2"></i> Назад к списку
+        </a>
+    </div>
+    
+    <div class="card shadow">
+        <div class="card-body">
+            <form action="{{ url_for('add_product') }}" method="post">
+                <div class="mb-3">
+                    <label for="name" class="form-label">Название продукта</label>
+                    <input type="text" class="form-control" id="name" name="name" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="unit" class="form-label">Единица измерения</label>
+                    <select class="form-select" id="unit" name="unit" required>
+                        <option value="">Выберите единицу измерения</option>
+                        <option value="кг">Килограмм (кг)</option>
+                        <option value="г">Грамм (г)</option>
+                        <option value="л">Литр (л)</option>
+                        <option value="мл">Миллилитр (мл)</option>
+                        <option value="шт">Штука (шт)</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="quantity" class="form-label">Начальное количество</label>
+                    <input type="number" class="form-control" id="quantity" name="quantity" step="0.01" min="0" value="0">
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Добавить продукт</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %} 
