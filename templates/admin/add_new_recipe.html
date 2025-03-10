@@ -1,0 +1,184 @@
+{% extends 'base.html' %}
+
+{% block title %}Добавление нового рецепта | Система управления кафе{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4">
+        <h1 class="mb-3 mb-md-0">Добавление нового рецепта</h1>
+        <a href="{{ url_for('admin_recipes') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-2"></i> Назад к списку
+        </a>
+    </div>
+    
+    <div class="card shadow mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Информация о блюде</h5>
+        </div>
+        <div class="card-body">
+            <form action="{{ url_for('add_new_recipe') }}" method="post" id="recipeForm">
+                <div class="row mb-3">
+                    <div class="col-md-6 mb-3 mb-md-0">
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Название блюда</label>
+                            <input type="text" class="form-control" id="name" name="name" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="category" class="form-label">Категория</label>
+                            <select class="form-select" id="category" name="category" required>
+                                <option value="">Выберите категорию</option>
+                                {% for category in categories %}
+                                <option value="{{ category.name }}">{{ category.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6 mb-3 mb-md-0">
+                        <div class="mb-3">
+                            <label for="price" class="form-label">Цена (₽)</label>
+                            <input type="number" class="form-control" id="price" name="price" step="0.01" min="0" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Описание</label>
+                            <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <h5 class="mb-3">Ингредиенты рецепта</h5>
+                
+                <div id="ingredientsContainer">
+                    <div class="row mb-3 ingredient-row">
+                        <div class="col-md-6 mb-2 mb-md-0">
+                            <select name="product_id" class="form-select" required>
+                                <option value="">Выберите продукт</option>
+                                {% for product in products %}
+                                <option value="{{ product.id }}">
+                                    {{ product.name }} ({{ product.unit }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-2 mb-md-0">
+                            <div class="input-group">
+                                <input type="number" name="quantity" class="form-control" step="0.01" min="0" value="0" required>
+                                <span class="input-group-text">ед.</span>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="button" class="btn btn-danger remove-ingredient w-100">
+                                <i class="fas fa-trash"></i> <span class="d-none d-md-inline">Удалить</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <button type="button" id="addIngredient" class="btn btn-success">
+                        <i class="fas fa-plus me-2"></i> Добавить ингредиент
+                    </button>
+                </div>
+                
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i> Сохранить рецепт
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Добавление нового ингредиента
+    document.getElementById('addIngredient').addEventListener('click', function() {
+        const container = document.getElementById('ingredientsContainer');
+        const newRow = document.createElement('div');
+        newRow.className = 'row mb-3 ingredient-row';
+        
+        // Получаем список продуктов из первой строки
+        const firstSelect = document.querySelector('select[name="product_id"]');
+        const options = firstSelect.innerHTML;
+        
+        newRow.innerHTML = `
+            <div class="col-md-6 mb-2 mb-md-0">
+                <select name="product_id" class="form-select" required>
+                    ${options}
+                </select>
+            </div>
+            <div class="col-md-4 mb-2 mb-md-0">
+                <div class="input-group">
+                    <input type="number" name="quantity" class="form-control" step="0.01" min="0" value="0" required>
+                    <span class="input-group-text">ед.</span>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <button type="button" class="btn btn-danger remove-ingredient w-100">
+                    <i class="fas fa-trash"></i> <span class="d-none d-md-inline">Удалить</span>
+                </button>
+            </div>
+        `;
+        
+        container.appendChild(newRow);
+        
+        // Обновляем обработчики для кнопок удаления
+        updateRemoveButtons();
+        
+        // Обновляем единицы измерения при выборе продукта
+        updateUnitListeners();
+    });
+    
+    // Функция для обновления обработчиков кнопок удаления
+    function updateRemoveButtons() {
+        document.querySelectorAll('.remove-ingredient').forEach(button => {
+            button.addEventListener('click', function() {
+                const row = this.closest('.ingredient-row');
+                if (document.querySelectorAll('.ingredient-row').length > 1) {
+                    row.remove();
+                } else {
+                    // Если это последняя строка, просто очищаем поля
+                    row.querySelector('select[name="product_id"]').value = '';
+                    row.querySelector('input[name="quantity"]').value = '0';
+                }
+            });
+        });
+    }
+    
+    // Функция для обновления единиц измерения при выборе продукта
+    function updateUnitListeners() {
+        document.querySelectorAll('select[name="product_id"]').forEach(select => {
+            select.addEventListener('change', function() {
+                const row = this.closest('.ingredient-row');
+                const unitSpan = row.querySelector('.input-group-text');
+                const selectedOption = this.options[this.selectedIndex];
+                
+                if (selectedOption.value) {
+                    const productText = selectedOption.text;
+                    const unitMatch = productText.match(/\(([^)]+)\)/);
+                    if (unitMatch && unitMatch[1]) {
+                        unitSpan.textContent = unitMatch[1];
+                    } else {
+                        unitSpan.textContent = 'ед.';
+                    }
+                } else {
+                    unitSpan.textContent = 'ед.';
+                }
+            });
+        });
+    }
+    
+    // Инициализация обработчиков
+    updateRemoveButtons();
+    updateUnitListeners();
+});
+</script>
+{% endblock %} 

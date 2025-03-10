@@ -22,6 +22,21 @@
                     <h5 class="mb-0">Меню</h5>
                 </div>
                 <div class="card-body">
+                    <!-- Фильтр по категориям -->
+                    <div class="mb-4">
+                        <h6 class="mb-2">Выберите категорию:</h6>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button type="button" class="btn btn-sm category-btn {% if not selected_category %}btn-primary{% else %}btn-outline-primary{% endif %}" data-category="">
+                                Все категории
+                            </button>
+                            {% for category in categories %}
+                            <button type="button" class="btn btn-sm category-btn {% if selected_category == category.name %}btn-primary{% else %}btn-outline-primary{% endif %}" data-category="{{ category.name }}">
+                                {{ category.name }}
+                            </button>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
                     <form action="{{ url_for('add_order') }}" method="post" id="orderForm">
                         <div class="row mb-4">
                             <div class="col-md-6">
@@ -51,10 +66,10 @@
                                         <th>Количество</th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody id="menuItemsContainer">
                                     {% for item in menu_items %}
                                     {% set available = get_available_portions(item.id) %}
-                                    <tr>
+                                    <tr class="menu-item-row" data-category="{{ item.category }}">
                                         <td>{{ item.name }}</td>
                                         <td>{{ item.category }}</td>
                                         <td>{{ item.price }} ₽</td>
@@ -70,7 +85,7 @@
                                         <td>
                                             <div class="input-group" style="width: 120px;">
                                                 <input type="hidden" name="menu_item_id" value="{{ item.id }}">
-                                                <input type="number" name="quantity" class="form-control" min="0" max="{{ available if available != 'inf' else 999 }}" value="0" {{ 'disabled' if available == 0 else '' }}>
+                                                <input type="number" name="quantity" class="form-control quantity-input" data-item-id="{{ item.id }}" min="0" max="{{ available if available != 'inf' else 999 }}" value="0" {{ 'disabled' if available == 0 else '' }}>
                                             </div>
                                         </td>
                                     </tr>
@@ -111,12 +126,51 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Сохраняем выбранные количества
+    const selectedQuantities = {};
+    
     // Получаем все поля количества
-    const quantityInputs = document.querySelectorAll('input[name="quantity"]');
+    const quantityInputs = document.querySelectorAll('.quantity-input');
     
     // Обновляем предварительный просмотр при изменении количества
     quantityInputs.forEach(input => {
-        input.addEventListener('change', updateOrderPreview);
+        input.addEventListener('change', function() {
+            // Сохраняем выбранное количество
+            const itemId = this.getAttribute('data-item-id');
+            selectedQuantities[itemId] = this.value;
+            
+            updateOrderPreview();
+        });
+    });
+    
+    // Обработчики для кнопок категорий
+    const categoryButtons = document.querySelectorAll('.category-btn');
+    categoryButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const selectedCategory = this.getAttribute('data-category');
+            
+            // Обновляем активную кнопку
+            categoryButtons.forEach(btn => {
+                if (btn === this) {
+                    btn.classList.remove('btn-outline-primary');
+                    btn.classList.add('btn-primary');
+                } else {
+                    btn.classList.remove('btn-primary');
+                    btn.classList.add('btn-outline-primary');
+                }
+            });
+            
+            // Фильтруем строки таблицы
+            const menuItemRows = document.querySelectorAll('.menu-item-row');
+            menuItemRows.forEach(row => {
+                const rowCategory = row.getAttribute('data-category');
+                if (!selectedCategory || rowCategory === selectedCategory) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
     });
     
     // Функция обновления предварительного просмотра

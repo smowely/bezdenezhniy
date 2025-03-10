@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block title %}Редактирование сотрудника | Система управления кафе{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Редактирование сотрудника</h1>
+        <a href="{{ url_for('admin_employees') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-2"></i> Назад к списку
+        </a>
+    </div>
+    
+    <div class="card shadow">
+        <div class="card-body">
+            <form method="post" action="{{ url_for('edit_employee', id=employee.id) }}">
+                <div class="mb-3">
+                    <label for="name" class="form-label">ФИО</label>
+                    <input type="text" class="form-control" id="name" name="name" value="{{ employee.name }}" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="position" class="form-label">Должность</label>
+                    <input type="text" class="form-control" id="position" name="position" value="{{ employee.position }}" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="phone" class="form-label">Телефон</label>
+                    <input type="text" class="form-control" id="phone" name="phone" value="{{ employee.phone }}">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="email" class="form-label">Email</label>
+                    <input type="email" class="form-control" id="email" name="email" value="{{ employee.email }}">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="hire_date" class="form-label">Дата найма</label>
+                    <input type="date" class="form-control" id="hire_date" name="hire_date" value="{{ employee.hire_date.strftime('%Y-%m-%d') }}">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="user_id" class="form-label">Связанный пользователь</label>
+                    <select class="form-select" id="user_id" name="user_id">
+                        <option value="">Не выбран</option>
+                        {% for user in available_users %}
+                        <option value="{{ user.id }}" {% if employee.user_id == user.id %}selected{% endif %}>
+                            {{ user.username }} ({{ user.role }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %} 

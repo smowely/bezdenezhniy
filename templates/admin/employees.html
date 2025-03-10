@@ -53,9 +53,14 @@
                             </td>
                             <td>
                                 {% if employee.status == 'активен' %}
-                                <a href="{{ url_for('fire_employee', id=employee.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('Вы уверены, что хотите уволить сотрудника?')">
-                                    <i class="fas fa-user-times"></i> Уволить
-                                </a>
+                                <div class="btn-group">
+                                    <a href="{{ url_for('edit_employee', id=employee.id) }}" class="btn btn-sm btn-info me-1">
+                                        <i class="fas fa-edit"></i> Редактировать
+                                    </a>
+                                    <a href="{{ url_for('fire_employee', id=employee.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('Вы уверены, что хотите уволить сотрудника?')">
+                                        <i class="fas fa-user-times"></i> Уволить
+                                    </a>
+                                </div>
                                 {% else %}
                                 <button class="btn btn-sm btn-secondary" disabled>
                                     <i class="fas fa-user-times"></i> Уволен

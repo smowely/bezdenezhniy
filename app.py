@@ -4,6 +4,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 import os
 from functools import wraps
+import argparse
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'cafe_management_secret_key'
@@ -53,6 +54,11 @@ class MenuItem(db.Model):
     is_available = db.Column(db.Boolean, default=True)
     # Связь с рецептами
     recipe_items = db.relationship('RecipeItem', backref='menu_item', lazy=True)
+
+class MenuCategory(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), nullable=False, unique=True)
+    description = db.Column(db.Text)
 
 class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -205,6 +211,8 @@ def calculate_available_portions(menu_item_id):
         portions = product.quantity / recipe_item.quantity
         available_portions = min(available_portions, int(portions))
     
+    if available_portions == float('inf'):
+        return 'inf'
     return available_portions
 
 # Функция для получения текущей даты в шаблонах
@@ -284,7 +292,7 @@ def admin_dashboard():
 @app.route('/admin/users')
 @admin_required
 def admin_users():
-    users = User.query.all()
+    users = User.query.filter_by(status='активен').all()
     return render_template('admin/users.html', users=users)
 
 @app.route('/admin/users/add', methods=['GET', 'POST'])
@@ -317,6 +325,35 @@ def add_user():
     
     return render_template('admin/add_user.html')
 
+@app.route('/admin/users/edit/<int:id>', methods=['GET', 'POST'])
+@admin_required
+def edit_user(id):
+    user = User.query.get_or_404(id)
+    
+    if request.method == 'POST':
+        username = request.form.get('username')
+        role = request.form.get('role')
+        password = request.form.get('password')
+        
+        # Проверка на существование пользователя с таким же именем
+        existing_user = User.query.filter(User.username == username, User.id != id).first()
+        if existing_user:
+            flash('Пользователь с таким именем уже существует', 'danger')
+            return redirect(url_for('edit_user', id=id))
+        
+        user.username = username
+        user.role = role
+        
+        # Обновляем пароль только если он был введен
+        if password:
+            user.password = generate_password_hash(password)
+        
+        db.session.commit()
+        flash('Пользователь успешно обновлен', 'success')
+        return redirect(url_for('admin_users'))
+    
+    return render_template('admin/edit_user.html', user=user)
+
 @app.route('/admin/users/fire/<int:id>')
 @admin_required
 def fire_user(id):
@@ -337,7 +374,7 @@ def fire_user(id):
 @app.route('/admin/employees')
 @admin_required
 def admin_employees():
-    employees = Employee.query.all()
+    employees = Employee.query.filter_by(status='активен').all()
     return render_template('admin/employees.html', employees=employees)
 
 @app.route('/admin/employees/add', methods=['GET', 'POST'])
@@ -379,6 +416,51 @@ def add_employee():
     
     return render_template('admin/add_employee.html', available_users=available_users)
 
+@app.route('/admin/employees/edit/<int:id>', methods=['GET', 'POST'])
+@admin_required
+def edit_employee(id):
+    employee = Employee.query.get_or_404(id)
+    
+    if request.method == 'POST':
+        name = request.form.get('name')
+        position = request.form.get('position')
+        phone = request.form.get('phone')
+        email = request.form.get('email')
+        hire_date_str = request.form.get('hire_date')
+        user_id = request.form.get('user_id')
+        
+        try:
+            hire_date = datetime.strptime(hire_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            hire_date = employee.hire_date
+        
+        employee.name = name
+        employee.position = position
+        employee.phone = phone
+        employee.email = email
+        employee.hire_date = hire_date
+        
+        # Обновляем связанного пользователя только если он изменился
+        if user_id and user_id != str(employee.user_id or ''):
+            employee.user_id = user_id
+        
+        db.session.commit()
+        flash('Сотрудник успешно обновлен', 'success')
+        return redirect(url_for('admin_employees'))
+    
+    # Получаем список пользователей без связанных сотрудников или с текущим сотрудником
+    available_users = User.query.filter(
+        db.and_(
+            User.status == 'активен',
+            db.or_(
+                ~User.id.in_(db.session.query(Employee.user_id).filter(Employee.user_id != None, Employee.id != id)),
+                User.id == employee.user_id
+            )
+        )
+    ).all()
+    
+    return render_template('admin/edit_employee.html', employee=employee, available_users=available_users)
+
 @app.route('/admin/employees/fire/<int:id>')
 @admin_required
 def fire_employee(id):
@@ -400,7 +482,7 @@ def fire_employee(id):
 @app.route('/admin/orders')
 @admin_required
 def admin_orders():
-    orders = Order.query.order_by(Order.order_date.desc()).all()
+    orders = Order.query.filter(Order.status != 'оплачен').order_by(Order.order_date.desc()).all()
     return render_template('admin/orders.html', orders=orders)
 
 @app.route('/admin/orders/update_status/<int:id>', methods=['POST'])
@@ -422,7 +504,7 @@ def admin_update_order_status(id):
 @app.route('/admin/shifts')
 @admin_required
 def admin_shifts():
-    shifts = Shift.query.order_by(Shift.shift_date.desc()).all()
+    shifts = Shift.query.filter(Shift.status != 'завершена').order_by(Shift.shift_date.desc()).all()
     return render_template('admin/shifts.html', shifts=shifts)
 
 @app.route('/admin/shifts/add', methods=['GET', 'POST'])
@@ -582,6 +664,85 @@ def edit_recipe(id):
     
     return render_template('admin/edit_recipe.html', menu_item=menu_item, products=products, recipe_items=recipe_items)
 
+@app.route('/admin/recipes/delete/<int:id>')
+@admin_required
+def delete_recipe(id):
+    # Удаляем все записи рецепта для данного блюда
+    RecipeItem.query.filter_by(menu_item_id=id).delete()
+    db.session.commit()
+    
+    flash('Рецепт успешно удален', 'success')
+    return redirect(url_for('admin_recipes'))
+
+@app.route('/admin/categories')
+@admin_required
+def admin_categories():
+    categories = MenuCategory.query.all()
+    return render_template('admin/categories.html', categories=categories)
+
+@app.route('/admin/categories/add', methods=['GET', 'POST'])
+@admin_required
+def add_category():
+    if request.method == 'POST':
+        name = request.form.get('name')
+        description = request.form.get('description')
+        
+        # Проверка на существование категории
+        existing_category = MenuCategory.query.filter_by(name=name).first()
+        if existing_category:
+            flash('Категория с таким названием уже существует', 'danger')
+            return redirect(url_for('add_category'))
+        
+        category = MenuCategory(name=name, description=description)
+        db.session.add(category)
+        db.session.commit()
+        
+        flash('Категория успешно добавлена', 'success')
+        return redirect(url_for('admin_categories'))
+    
+    return render_template('admin/add_category.html')
+
+@app.route('/admin/categories/edit/<int:id>', methods=['GET', 'POST'])
+@admin_required
+def edit_category(id):
+    category = MenuCategory.query.get_or_404(id)
+    
+    if request.method == 'POST':
+        name = request.form.get('name')
+        description = request.form.get('description')
+        
+        # Проверка на существование категории с таким же названием
+        existing_category = MenuCategory.query.filter(MenuCategory.name == name, MenuCategory.id != id).first()
+        if existing_category:
+            flash('Категория с таким названием уже существует', 'danger')
+            return redirect(url_for('edit_category', id=id))
+        
+        category.name = name
+        category.description = description
+        db.session.commit()
+        
+        flash('Категория успешно обновлена', 'success')
+        return redirect(url_for('admin_categories'))
+    
+    return render_template('admin/edit_category.html', category=category)
+
+@app.route('/admin/categories/delete/<int:id>')
+@admin_required
+def delete_category(id):
+    category = MenuCategory.query.get_or_404(id)
+    
+    # Проверяем, используется ли категория в блюдах
+    menu_items = MenuItem.query.filter_by(category=category.name).all()
+    if menu_items:
+        flash('Невозможно удалить категорию, так как она используется в блюдах', 'danger')
+        return redirect(url_for('admin_categories'))
+    
+    db.session.delete(category)
+    db.session.commit()
+    
+    flash('Категория успешно удалена', 'success')
+    return redirect(url_for('admin_categories'))
+
 # Маршруты для официанта
 @app.route('/waiter')
 @waiter_required
@@ -638,14 +799,18 @@ def waiter_orders():
     
     # Получаем заказы текущей смены
     if active_shift:
-        orders = Order.query.filter_by(shift_id=active_shift.id).all()
+        orders = Order.query.filter(
+            Order.shift_id == active_shift.id,
+            Order.waiter_id == current_user_id,
+            Order.status != 'оплачен'
+        ).all()
     else:
         orders = []
     
     return render_template('waiter/orders.html', 
-                          active_shift=active_shift,
+                          orders=orders, 
                           user_in_active_shift=user_in_active_shift,
-                          orders=orders)
+                          active_shift=active_shift)
 
 @app.route('/waiter/orders/add', methods=['GET', 'POST'])
 @waiter_required
@@ -696,7 +861,7 @@ def add_order():
                 quantity = int(quantities[i])
                 
                 available = calculate_available_portions(menu_item_id)
-                if quantity > available:
+                if available != 'inf' and quantity > int(available):
                     menu_item = MenuItem.query.get(menu_item_id)
                     flash(f'Недостаточно продуктов для приготовления "{menu_item.name}". Доступно: {available}', 'danger')
                     return redirect(url_for('add_order'))
@@ -711,7 +876,7 @@ def add_order():
         )
         
         db.session.add(order)
-        db.session.commit()
+        db.session.flush()  # Получаем ID заказа
         
         # Добавляем позиции заказа
         total_price = 0
@@ -722,8 +887,9 @@ def add_order():
                 menu_item_id = int(menu_item_ids[i])
                 quantity = int(quantities[i])
                 
-                menu_item = MenuItem.query.get(menu_item_id)
-                if menu_item:
+                if quantity > 0:
+                    menu_item = MenuItem.query.get(menu_item_id)
+                    
                     # Создаем позицию заказа
                     order_item = OrderItem(
                         order_id=order.id,
@@ -731,6 +897,7 @@ def add_order():
                         quantity=quantity,
                         price=menu_item.price
                     )
+                    
                     db.session.add(order_item)
                     
                     # Обновляем общую сумму
@@ -754,11 +921,23 @@ def add_order():
         flash('Заказ успешно создан', 'success')
         return redirect(url_for('waiter_orders'))
     
-    # Получаем все доступные позиции меню
-    menu_items = MenuItem.query.filter_by(is_available=True).order_by(MenuItem.category, MenuItem.name).all()
+    # Получаем выбранную категорию из параметров запроса
+    selected_category = request.args.get('category', '')
+    
+    # Получаем все категории
+    categories = MenuCategory.query.order_by(MenuCategory.name).all()
+    
+    # Получаем все доступные позиции меню с фильтрацией по категории, если она выбрана
+    query = MenuItem.query.filter_by(is_available=True)
+    if selected_category:
+        query = query.filter_by(category=selected_category)
+    
+    menu_items = query.order_by(MenuItem.name).all()
     
     return render_template('waiter/add_order.html', 
-                          menu_items=menu_items, 
+                          menu_items=menu_items,
+                          categories=categories,
+                          selected_category=selected_category,
                           active_shift=active_shift)
 
 @app.route('/waiter/orders/update_status/<int:id>/<string:status>')
@@ -839,16 +1018,19 @@ def cook_orders():
         if user_in_active_shift:
             break
     
-    # Получаем все заказы текущей смены
+    # Получаем заказы со статусом "принят" или "готовится"
     if active_shift:
-        orders = Order.query.filter_by(shift_id=active_shift.id).all()
+        orders = Order.query.filter(
+            Order.shift_id == active_shift.id,
+            Order.status.in_(['принят', 'готовится', 'готов'])
+        ).all()
     else:
         orders = []
     
     return render_template('cook/orders.html', 
-                          active_shift=active_shift,
+                          orders=orders, 
                           user_in_active_shift=user_in_active_shift,
-                          orders=orders)
+                          active_shift=active_shift)
 
 @app.route('/cook/orders/update_status/<int:id>/<string:status>')
 @cook_required
@@ -866,7 +1048,65 @@ def cook_update_order_status(id, status):
     flash(f'Статус заказа изменен на "{status}"', 'success')
     return redirect(url_for('cook_orders'))
 
+@app.route('/admin/recipes/add_new', methods=['GET', 'POST'])
+@admin_required
+def add_new_recipe():
+    menu_items = MenuItem.query.all()
+    products = Product.query.all()
+    categories = MenuCategory.query.all()
+    
+    if request.method == 'POST':
+        name = request.form.get('name')
+        category = request.form.get('category')
+        price = float(request.form.get('price'))
+        description = request.form.get('description')
+        
+        # Создаем новое блюдо
+        menu_item = MenuItem(
+            name=name,
+            category=category,
+            price=price,
+            description=description,
+            is_available=True
+        )
+        
+        db.session.add(menu_item)
+        db.session.flush()  # Получаем ID нового блюда
+        
+        # Добавляем ингредиенты
+        product_ids = request.form.getlist('product_id')
+        quantities = request.form.getlist('quantity')
+        
+        for i in range(len(product_ids)):
+            if i < len(quantities) and product_ids[i] and quantities[i]:
+                product_id = int(product_ids[i])
+                quantity = float(quantities[i])
+                
+                recipe_item = RecipeItem(
+                    menu_item_id=menu_item.id,
+                    product_id=product_id,
+                    quantity=quantity
+                )
+                
+                db.session.add(recipe_item)
+        
+        db.session.commit()
+        flash('Рецепт успешно добавлен', 'success')
+        return redirect(url_for('admin_recipes'))
+    
+    return render_template('admin/add_new_recipe.html', menu_items=menu_items, products=products, categories=categories)
+
 if __name__ == '__main__':
     # Создаем таблицы при запуске приложения
     create_tables()
-    app.run(debug=True)
+    
+    # Создаем парсер аргументов командной строки
+    parser = argparse.ArgumentParser(description='Запуск системы управления кафе')
+    parser.add_argument('--host', default='0.0.0.0', help='Хост для запуска сервера (по умолчанию: 0.0.0.0)')
+    parser.add_argument('--port', type=int, default=5000, help='Порт для запуска сервера (по умолчанию: 5000)')
+    
+    # Парсим аргументы
+    args = parser.parse_args()
+    
+    # Запускаем приложение с указанными параметрами
+    app.run(debug=True, host=args.host, port=args.port)
